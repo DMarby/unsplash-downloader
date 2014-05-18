@@ -89,7 +89,7 @@ function downloadNextImage () {
         return;
     }
 
-    console.log('Downloading image ' + (idToFetch + 1) + ' of ' + toDownload.length);
+    console.log('Downloading image ' + (idToFetch + 1) + ' of ' + toDownload.length + ' (' + toDownload[idToFetch] + ')');
 
  		downloadImage(toDownload[idToFetch], function(imageurl, filename) {
 			photos.push(imageurl);
