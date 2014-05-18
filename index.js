@@ -1,7 +1,7 @@
 var commander = require('commander');
 var https = require('https'), http = require('http');
-var request = require("request");
-var fs = require("fs");
+var request = require('request');
+var fs = require('fs');
 var pjson = require('./package.json');
 
 try {
@@ -11,6 +11,13 @@ try {
 }
 
 var toDownload = [];
+
+var linkOffset = 0;
+var pages = 0;
+var currentPost = 0;
+
+// Change this to download more images concurrently.
+var concurrentDownloads = 5;
 
 var folderPath = 'photos';
 commander
@@ -30,22 +37,22 @@ function getPostCount (callback) {
 }
 
 function downloadImage (uri, callback) {
-  request.head(uri, function(err, res, body) {
-  	var filename = res.request.path.split("/").slice(-1)[0];
+  request.head(uri, function (err, res, body) {
+  	var filename = res.request.path.split('/').slice(-1)[0];
 		var file = fs.createWriteStream(folderPath + '/' + filename);
-		if (res.request.uri.protocol == "https:") {
-			https.get(res.request.uri.href, function(response) {
+		if (res.request.uri.protocol == 'https:') {
+			https.get(res.request.uri.href, function (response) {
 				response.pipe(file);
-				file.on('finish', function() {
+				file.on('finish', function () {
 					file.close(function () {
 			  		callback(uri, filename);
 					});
 				});
 			});
 		} else {
-			http.get(res.request.uri.href, function(response) {
+			http.get(res.request.uri.href, function (response) {
 				response.pipe(file);
-				file.on('finish', function() {
+				file.on('finish', function () {
 					file.close(function () {
 			  		callback(uri, filename);
 					});
@@ -61,9 +68,9 @@ function getImageLinks (offset, callback) {
 			var data = JSON.parse(body);
 			for(post in data.response.posts) {
 				var url = data.response.posts[post].link_url;
-				if(photos.indexOf(url) > -1 || url == undefined) {
+				if (photos.indexOf(url) > -1 || url == undefined) {
 					if (url == undefined) {
-						console.log("Could not find image url for " + data.response.posts[post].post_url);
+						console.log('Could not find image url for ' + data.response.posts[post].post_url);
 					}
 					continue;
 				}
@@ -74,18 +81,11 @@ function getImageLinks (offset, callback) {
 	});
 }
 
-var linkOffset = 0;
-var pages = 0;
-var currentPost = 0;
-
-// Change this to download more images concurrently.
-var concurrentDownloads = 5;
-
-function downloadNextImage(){ 
+function downloadNextImage () { 
     var idToFetch = currentPost++;
  
     if (currentPost > toDownload.length) {
-				fs.writeFile("photos.json", JSON.stringify(photos), "utf8", function (err) {});
+				fs.writeFile('photos.json', JSON.stringify(photos), 'utf8', function (err) {});
         return;
     }
 
@@ -97,7 +97,7 @@ function downloadNextImage(){
  		});
 }
 
-function imageLinksCallback(the_callback) {
+function imageLinksCallback (the_callback) {
 	linkOffset += 20;
 	if (linkOffset > pages) {
 		for (var i = 0; i <  concurrentDownloads; i++) {
