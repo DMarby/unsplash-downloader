@@ -2,10 +2,11 @@ var commander = require('commander');
 var https = require('https'), http = require('http');
 var request = require('request');
 var fs = require('fs');
+var exec = require('child_process').exec;
 var noConfig = false;
 try {
   var config = require('./config');
-  if (!config.api_key || !config.concurrent_downloads) {
+  if (!config.api_key || !config.concurrent_downloads || !config.folder_path || config.git_push === undefined) {
     noConfig = true;
   }
 } catch (e) {
@@ -26,24 +27,24 @@ var linkOffset = 0;
 var pages = 0;
 var currentPost = 0;
 
-
-var folderPath = 'photos';
-
 if (noConfig) {
   commander
     .version(pjson.version)
     .option('-k, --api_key <key>', 'Tumblr API Key to be used')
     .option('-c, --concurrent_downloads <amount>', 'Amount of concurrent downloads allowed', 5)
+    .option('-f, --folder_path <path>', 'Folder path of where to download the photos', 'photos')
+    .option('-g, --git_push', 'Automatically commit & push to git repo in photos folder path')
     .parse(process.argv);
  }
 
 var api_key = !config.api_key ? commander.api_key : config.api_key;
 var concurrent_downloads = !config.concurrent_downloads ? commander.concurrent_downloads : config.concurrent_downloads;
-if (!api_key || !concurrent_downloads) {
+var folder_path = !config.folder_path ? commander.folder_path : config.folder_path;
+var git_push = config.git_push === undefined ? commander.git_push : config.git_push;
+if (!api_key || !concurrent_downloads || !folder_path) {
   commander.help();
 }
-
-fs.mkdir(folderPath, function(e) {});
+fs.mkdir(folder_path, function(e) {});
 
 function getPostCount (callback) {
   request('http://api.tumblr.com/v2/blog/unsplash.com/posts?api_key=' + api_key, function (error, response, body) {
@@ -57,7 +58,7 @@ function getPostCount (callback) {
 function downloadImage (uri, callback) {
   request.head(uri, function (err, res, body) {
     var filename = res.request.path.split('/').slice(-1)[0];
-    var file = fs.createWriteStream(folderPath + '/' + filename);
+    var file = fs.createWriteStream(folder_path + '/' + filename);
     if (res.request.uri.protocol == 'https:') {
       https.get(res.request.uri.href, function (response) {
         response.pipe(file);
@@ -99,20 +100,38 @@ function getImageLinks (offset, callback) {
   });
 }
 
+function exec_output(error, stdout, stderr) { 
+  console.log(stdout); 
+}
+
+var exitCount = 0;
+
 function downloadNextImage () { 
-    var idToFetch = currentPost++;
- 
-    if (currentPost > toDownload.length) {
+  if (toDownload.length == 0) {
+    console.log('Exiting, nothing to download!');
+    process.exit(0);
+    return;
+  }
+  var idToFetch = currentPost++;
+
+  if (currentPost > toDownload.length) {
+      exitCount++;
+      if (exitCount >= concurrent_downloads) {
         fs.writeFile('photos.json', JSON.stringify(photos), 'utf8', function (err) {});
-        return;
-    }
+        if (git_push) {
+          console.log('Pushing to git!');
+          exec('cd ' + folder_path + ' && git add -A && git commit -am \'Add more images - ' + new Date().toLocaleDateString() + '\' && git push origin master', exec_output);
+        }
+      }
+      return;
+  }
 
-    console.log('Downloading image ' + (idToFetch + 1) + ' of ' + toDownload.length + ' (' + toDownload[idToFetch] + ')');
+  console.log('Downloading image ' + (idToFetch + 1) + ' of ' + toDownload.length + ' (' + toDownload[idToFetch] + ')');
 
-    downloadImage(toDownload[idToFetch], function(imageurl, filename) {
-      photos.push(imageurl);
-      downloadNextImage();
-    });
+  downloadImage(toDownload[idToFetch], function(imageurl, filename) {
+    photos.push(imageurl);
+    downloadNextImage();
+  });
 }
 
 function imageLinksCallback (the_callback) {

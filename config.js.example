@@ -1,4 +1,6 @@
 module.exports = exports = {
 	api_key: 'TUMBLR_API_KEY',
-	concurrent_downloads: 5
+	concurrent_downloads: 5,
+	folder_path: 'photos',
+	git_push: false
 }
