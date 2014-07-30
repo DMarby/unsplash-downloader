@@ -2,12 +2,22 @@ var commander = require('commander');
 var https = require('https'), http = require('http');
 var request = require('request');
 var fs = require('fs');
+var noConfig = false;
+try {
+  var config = require('./config');
+  if (!config.api_key || !config.concurrent_downloads) {
+    noConfig = true;
+  }
+} catch (e) {
+  noConfig = true;
+}
 var pjson = require('./package.json');
+var api_key;
 
 try {
-	var photos = require('./photos.json');
+  var photos = require('./photos.json');
 } catch (e) {
-	var photos = [];
+  var photos = [];
 }
 
 var toDownload = [];
@@ -16,100 +26,108 @@ var linkOffset = 0;
 var pages = 0;
 var currentPost = 0;
 
-// Change this to download more images concurrently.
-var concurrentDownloads = 5;
 
 var folderPath = 'photos';
-commander
-  .version(pjson.version)
-  .option('-k, --api_key [key]', 'Tumblr API Key to be used')
-  .parse(process.argv);
+
+if (noConfig) {
+  commander
+    .version(pjson.version)
+    .option('-k, --api_key <key>', 'Tumblr API Key to be used')
+    .option('-c, --concurrent_downloads <amount>', 'Amount of concurrent downloads allowed', 5)
+    .parse(process.argv);
+ }
+
+var api_key = !config.api_key ? commander.api_key : config.api_key;
+var concurrent_downloads = !config.concurrent_downloads ? commander.concurrent_downloads : config.concurrent_downloads;
+if (!api_key || !concurrent_downloads) {
+  commander.help();
+}
 
 fs.mkdir(folderPath, function(e) {});
 
 function getPostCount (callback) {
-	request('http://api.tumblr.com/v2/blog/unsplash.com/posts?api_key=' + commander.api_key, function (error, response, body) {
-		if (!error && response.statusCode == 200) {
-			var data = JSON.parse(body);
-			callback(data.response.total_posts);
-	  }
-	});
+  request('http://api.tumblr.com/v2/blog/unsplash.com/posts?api_key=' + api_key, function (error, response, body) {
+    if (!error && response.statusCode == 200) {
+      var data = JSON.parse(body);
+      callback(data.response.total_posts);
+    }
+  });
 }
 
 function downloadImage (uri, callback) {
   request.head(uri, function (err, res, body) {
-  	var filename = res.request.path.split('/').slice(-1)[0];
-		var file = fs.createWriteStream(folderPath + '/' + filename);
-		if (res.request.uri.protocol == 'https:') {
-			https.get(res.request.uri.href, function (response) {
-				response.pipe(file);
-				file.on('finish', function () {
-					file.close(function () {
-			  		callback(uri, filename);
-					});
-				});
-			});
-		} else {
-			http.get(res.request.uri.href, function (response) {
-				response.pipe(file);
-				file.on('finish', function () {
-					file.close(function () {
-			  		callback(uri, filename);
-					});
-				});
-			});
-		}
+    var filename = res.request.path.split('/').slice(-1)[0];
+    var file = fs.createWriteStream(folderPath + '/' + filename);
+    if (res.request.uri.protocol == 'https:') {
+      https.get(res.request.uri.href, function (response) {
+        response.pipe(file);
+        file.on('finish', function () {
+          file.close(function () {
+            callback(uri, filename);
+          });
+        });
+      });
+    } else {
+      http.get(res.request.uri.href, function (response) {
+        response.pipe(file);
+        file.on('finish', function () {
+          file.close(function () {
+            callback(uri, filename);
+          });
+        });
+      });
+    }
   });
 };
 
 function getImageLinks (offset, callback) {
-	request('http://api.tumblr.com/v2/blog/unsplash.com/posts?api_key=' + commander.api_key + '&offset=' + offset, function (error, response, body) {
-		if (!error && response.statusCode == 200) {
-			var data = JSON.parse(body);
-			for(post in data.response.posts) {
-				var url = data.response.posts[post].link_url;
-				if (photos.indexOf(url) > -1 || url == undefined) {
-					if (url == undefined) {
-						console.log('Could not find image url for ' + data.response.posts[post].post_url);
-					}
-					continue;
-				}
-				toDownload.push(url);
-			}	
-			callback(offset);  
-		}
-	});
+  request('http://api.tumblr.com/v2/blog/unsplash.com/posts?api_key=' + api_key + '&offset=' + offset, function (error, response, body) {
+    if (!error && response.statusCode == 200) {
+      var data = JSON.parse(body);
+      for(post in data.response.posts) {
+        var url = data.response.posts[post].link_url;
+        if (photos.indexOf(url) > -1 || url == undefined) {
+          if (url == undefined) {
+            console.log('Could not find image url for ' + data.response.posts[post].post_url);
+          }
+          continue;
+        }
+        toDownload.push(url);
+      } 
+      callback(offset);  
+    }
+  });
 }
 
 function downloadNextImage () { 
     var idToFetch = currentPost++;
  
     if (currentPost > toDownload.length) {
-				fs.writeFile('photos.json', JSON.stringify(photos), 'utf8', function (err) {});
+        fs.writeFile('photos.json', JSON.stringify(photos), 'utf8', function (err) {});
         return;
     }
 
     console.log('Downloading image ' + (idToFetch + 1) + ' of ' + toDownload.length + ' (' + toDownload[idToFetch] + ')');
 
- 		downloadImage(toDownload[idToFetch], function(imageurl, filename) {
-			photos.push(imageurl);
- 			downloadNextImage();
- 		});
+    downloadImage(toDownload[idToFetch], function(imageurl, filename) {
+      photos.push(imageurl);
+      downloadNextImage();
+    });
 }
 
 function imageLinksCallback (the_callback) {
-	linkOffset += 20;
-	if (linkOffset > pages) {
-		for (var i = 0; i <  concurrentDownloads; i++) {
-			downloadNextImage();
-		}
-		return;
-	}
-	getImageLinks(linkOffset, imageLinksCallback);
+  linkOffset += 20;
+  if (linkOffset > pages) {
+    for (var i = 0; i <  concurrent_downloads; i++) {
+      downloadNextImage();
+    }
+    return;
+  }
+  getImageLinks(linkOffset, imageLinksCallback);
 
 }
 
 getPostCount(function (postCount) {
-	pages = Math.floor(postCount / 20) * 20;
-	getImageLinks(linkOffset, imageLinksCallback);
+  pages = Math.floor(postCount / 20) * 20;
+  getImageLinks(linkOffset, imageLinksCallback);
 });

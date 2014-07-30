@@ -9,6 +9,9 @@ $ git clone https://github.com/DMarby/unsplash-downloader.git
 $ cd unsplash-downloader
 $ npm install
 $ node index --api_key=TUMBLR_APPLICATION_CONSUMER_KEY
+or
+Copy config.js.example to config.js, insert API key, then run using:
+$ node index
 ```
 
 This will download the photos into `photos/`.
