@@ -122,6 +122,10 @@ function downloadNextImage () {
           console.log('Pushing to git!');
           exec('cd ' + folder_path + ' && git add -A && git commit -am \'Add more images - ' + new Date().toLocaleDateString() + '\' && git push origin master', exec_output);
         }
+        if (config.post_command) {
+          console.log('Executing post_command');
+          exec(config.post_command);
+        }
       }
       return;
   }
