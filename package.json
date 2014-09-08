@@ -13,6 +13,7 @@
   "author": "David Marby <david@dmarby.se> http://dmarby.se",
   "dependencies": {
     "commander": "^2.2.0",
-    "request": "^2.35.0"
+    "request": "^2.35.0",
+    "cheerio": "^0.17.0"
   }
 }
