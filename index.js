@@ -89,6 +89,10 @@ var downloadImage = function (the_metadata, callback) {
   });
 }
 
+var removeSpaces = function (str) {
+  return str.replace(/^\s\s*/, '').replace(/\s\s*$/, '');
+}
+
 var getImageInfo = function (offset, callback) {
   request('http://api.tumblr.com/v2/blog/unsplash.com/posts?api_key=' + api_key + '&offset=' + offset, function (error, response, body) {
     if (!error && response.statusCode == 200) {
@@ -112,6 +116,10 @@ var getImageInfo = function (offset, callback) {
             imageMetadata.author = linkText;
           }
         });
+        if (imageMetadata.author == null) {
+          var the_author = $('p').text().split('/')[1];
+          imageMetadata.author = the_author ? removeSpaces(the_author.replace('By', '')) : 'Unknown';
+        }
         if (imageMetadata.image_url === undefined || photos.indexOf(imageMetadata.image_url) > -1) {
           if (imageMetadata.image_url === undefined) {
             console.log('Could not find image url for ' + the_post.post_url);
