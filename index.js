@@ -8,14 +8,13 @@ var exec = require('child_process').exec;
 var noConfig = false;
 try {
   var config = require('./config');
-  if (!config.api_key || !config.concurrent_downloads || !config.folder_path || config.git_push === undefined) {
+  if (!config.concurrent_downloads || !config.folder_path || config.git_push === undefined) {
     noConfig = true;
   }
 } catch (e) {
   noConfig = true;
 }
 var pjson = require('./package.json');
-var api_key;
 
 try {
   var photos = require('./photos.json');
@@ -27,45 +26,50 @@ var metadata = [];
 
 var toDownload = [];
 
-var linkOffset = 0;
 var pages = 0;
+var page = 1;
 var currentPost = 0;
 
 if (noConfig) {
   commander
     .version(pjson.version)
-    .option('-k, --api_key <key>', 'Tumblr API Key to be used')
     .option('-c, --concurrent_downloads <amount>', 'Amount of concurrent downloads allowed', 5)
     .option('-f, --folder_path <path>', 'Folder path of where to download the photos', 'photos')
     .option('-g, --git_push', 'Automatically commit & push to git repo in photos folder path')
     .parse(process.argv);
  }
 
-var api_key = !config.api_key ? commander.api_key : config.api_key;
 var concurrent_downloads = !config.concurrent_downloads ? commander.concurrent_downloads : config.concurrent_downloads;
 var folder_path = !config.folder_path ? commander.folder_path : config.folder_path;
 var git_push = config.git_push === undefined ? commander.git_push : config.git_push;
-if (!api_key || !concurrent_downloads || !folder_path) {
+if (!concurrent_downloads || !folder_path) {
   commander.help();
 }
 
 fs.mkdir(folder_path, function(e) {});
 
-var getPostCount = function (callback) {
-  request('http://api.tumblr.com/v2/blog/unsplash.com/posts?api_key=' + api_key, function (error, response, body) {
+var getPageCount = function (callback) {
+  var highestPage = 0;
+  request('https://unsplash.com', function (error, response, body) {
     if (!error && response.statusCode == 200) {
-      var data = JSON.parse(body);
-      callback(data.response.total_posts);
+      var $ = cheerio.load(body);
+      $('.pagination a').each(function (index, element) {
+        var linkText = $(this).text();
+        if (!isNaN(parseInt(linkText)) && (parseInt(linkText) > highestPage)) {
+          highestPage = parseInt(linkText);
+        }
+      });
+      callback(highestPage);
     }
   });
 }
 
 var downloadImage = function (the_metadata, callback) {
   request.head(the_metadata.image_url, function (err, res, body) {
-    var original_filename = res.request.path.split('/').slice(-1)[0];
-    var filename = the_metadata.tumblr_id + path.extname(original_filename);
+    var original_filename = res.request.path.split('/').slice(-1)[0].split('?')[0];
+    //var filename = the_metadata.unsplash_id + path.extname(original_filename);
+    var filename = the_metadata.unsplash_id + '.jpeg';
     the_metadata.filename = filename;
-    the_metadata.original_filename = original_filename;
     var file = fs.createWriteStream(folder_path + '/' + filename);
     if (res.request.uri.protocol == 'https:') {
       https.get(res.request.uri.href, function (response) {
@@ -93,42 +97,42 @@ var removeSpaces = function (str) {
   return str.replace(/^\s\s*/, '').replace(/\s\s*$/, '');
 }
 
-var getImageInfo = function (offset, callback) {
-  request('http://api.tumblr.com/v2/blog/unsplash.com/posts?api_key=' + api_key + '&offset=' + offset, function (error, response, body) {
+var getImageInfo = function (page, callback) {
+  request('https://unsplash.com/?page=' + page, function (error, response, body) {
     if (!error && response.statusCode == 200) {
-      var data = JSON.parse(body);
-      for(post in data.response.posts) {
-        var the_post = data.response.posts[post];
-        var $ = cheerio.load(the_post.caption);
+      var $ = cheerio.load(body);
+      $('.photo-container').each(function (index, element) {
+        var url = $(this).find('.photo a').attr('href');
+        var post_url = 'https://unsplash.com' + url.replace('/download', '');
         var alternative_url = undefined;
         var imageMetadata = {
-          'post_url': the_post.post_url,
-          'image_url': the_post.link_url,
-          'tumblr_id': the_post.id,
+          'post_url': post_url,
+          'image_url': 'https://unsplash.com' + url,
+          'unsplash_id': url.replace('/photos/', '').replace('/download', '')
         }
-        $('a').each(function(index, element) {
+        $(this).find('.epsilon a').each(function (index, element) {
           var linkText = $(this).text();
           var linkURL = $(this).attr('href');
           if (linkText === 'Download') {
             imageMetadata.image_url = imageMetadata.image_url ? imageMetadata.image_url : linkURL;
           } else {
-            imageMetadata.author_url = linkURL;
+            imageMetadata.author_url = 'https://unsplash.com' + linkURL;
             imageMetadata.author = linkText;
           }
         });
         if (imageMetadata.author == null) {
-          var the_author = $('p').text().split('/')[1];
+          var the_author = $(this).find('.epsilon p').text().split('/')[1];
           imageMetadata.author = the_author ? removeSpaces(the_author.replace('By', '')) : 'Unknown';
         }
         if (imageMetadata.image_url === undefined || photos.indexOf(imageMetadata.image_url) > -1) {
           if (imageMetadata.image_url === undefined) {
-            console.log('Could not find image url for ' + the_post.post_url);
+            console.log('Could not find image url for ' + post_url);
           }
-          continue;
+        } else {
+          toDownload.push(imageMetadata);
         }
-        toDownload.push(imageMetadata);
-      } 
-      callback(offset);
+      })
+      callback(page);
     } else {
       console.log('Failed getting image info');
     }
@@ -176,17 +180,17 @@ var downloadNextImage = function () {
 }
 
 var imageLinksCallback = function (the_callback) {
-  linkOffset += 20;
-  if (linkOffset > pages) {
+  page++;
+  if (page > pages) {
     for (var i = 0; i <  concurrent_downloads; i++) {
       downloadNextImage();
     }
     return;
   }
-  getImageInfo(linkOffset, imageLinksCallback);
+  getImageInfo(page, imageLinksCallback);
 }
 
-getPostCount(function (postCount) {
-  pages = Math.floor(postCount / 20) * 20;
-  getImageInfo(linkOffset, imageLinksCallback);
+getPageCount(function (pageCount) {
+  pages = pageCount;
+  getImageInfo(1, imageLinksCallback);
 })
