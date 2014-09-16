@@ -70,8 +70,10 @@ var downloadImage = function (the_metadata, callback) {
   request.head(the_metadata.image_url, function (err, res, body) {
     /*var original_filename = res.request.path.split('/').slice(-1)[0].split('?')[0];
     var filename = the_metadata.unsplash_id + path.extname(original_filename);*/
-    var filename = highestId++ + '_' + the_metadata.unsplash_id + '.jpeg';
+    var imageId = highestId++;
+    var filename = imageId + '_' + the_metadata.unsplash_id + '.jpeg';
     the_metadata.filename = filename;
+    the_metadata.id = imageId;
     var file = fs.createWriteStream(folder_path + '/' + filename);
     if (res.request.uri.protocol == 'https:') {
       https.get(res.request.uri.href, function (response) {
