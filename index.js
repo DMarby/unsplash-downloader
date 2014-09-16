@@ -66,11 +66,10 @@ var getPageCount = function (callback) {
   });
 }
 
-var downloadImage = function (the_metadata, callback) {
+var downloadImage = function (the_metadata, imageId, callback) {
   request.head(the_metadata.image_url, function (err, res, body) {
     /*var original_filename = res.request.path.split('/').slice(-1)[0].split('?')[0];
     var filename = the_metadata.unsplash_id + path.extname(original_filename);*/
-    var imageId = highestId++;
     var filename = imageId + '_' + the_metadata.unsplash_id + '.jpeg';
     the_metadata.filename = filename;
     the_metadata.id = imageId;
@@ -176,7 +175,7 @@ var downloadNextImage = function () {
 
   console.log('Downloading image ' + (idToFetch + 1) + ' of ' + toDownload.length + ' (' + toDownload[idToFetch].post_url + ')');
 
-  downloadImage(toDownload[idToFetch], function(the_metadata) {
+  downloadImage(toDownload[idToFetch], highestId++, function(the_metadata) {
     photos.push(the_metadata.image_url);
     metadata.push(the_metadata);
     downloadNextImage();
