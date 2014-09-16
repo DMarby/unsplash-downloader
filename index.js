@@ -22,6 +22,8 @@ try {
   var photos = [];
 }
 
+var highestId = photos.length;
+
 var metadata = [];
 
 var toDownload = [];
@@ -68,7 +70,7 @@ var downloadImage = function (the_metadata, callback) {
   request.head(the_metadata.image_url, function (err, res, body) {
     var original_filename = res.request.path.split('/').slice(-1)[0].split('?')[0];
     //var filename = the_metadata.unsplash_id + path.extname(original_filename);
-    var filename = the_metadata.unsplash_id + '.jpeg';
+    var filename = highestId++ + '_' + the_metadata.unsplash_id + '.jpeg';
     the_metadata.filename = filename;
     var file = fs.createWriteStream(folder_path + '/' + filename);
     if (res.request.uri.protocol == 'https:') {
@@ -182,6 +184,7 @@ var downloadNextImage = function () {
 var imageLinksCallback = function (the_callback) {
   page++;
   if (page > pages) {
+    toDownload.reverse();
     for (var i = 0; i <  concurrent_downloads; i++) {
       downloadNextImage();
     }
