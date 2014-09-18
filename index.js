@@ -24,7 +24,11 @@ try {
 
 var highestId = photos.length;
 
-var metadata = [];
+try {
+  var metadata = require('./metadata.json');
+} catch (e) {
+  var metadata = [];
+}
 
 var toDownload = [];
 
