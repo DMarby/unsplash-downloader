@@ -167,7 +167,7 @@ var downloadNextImage = function () {
         fs.writeFile(folder_path + '/metadata.json', JSON.stringify(metadata), 'utf8', function (err) {});
         if (git_push) {
           console.log('Pushing to git!');
-          exec('cd ' + folder_path + ' && git add -A && git commit -am \'Add more images - ' + new Date().toLocaleDateString() + '\' && git push origin master', exec_output);
+          exec('cd ' + folder_path + ' && git add -A . && git commit -am \'Add more images - ' + new Date().toLocaleDateString() + '\' && git push origin master', exec_output);
         }
         if (config.post_command) {
           console.log('Executing post_command');
