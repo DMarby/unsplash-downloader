@@ -74,7 +74,7 @@ var downloadImage = function (the_metadata, imageId, callback) {
   request.head(the_metadata.image_url, function (err, res, body) {
     /*var original_filename = res.request.path.split('/').slice(-1)[0].split('?')[0];
     var filename = the_metadata.unsplash_id + path.extname(original_filename);*/
-    var filename = imageId + '_' + the_metadata.unsplash_id + '.jpeg';
+    var filename = String('0000' + imageId).slice(-4) + '_' + the_metadata.unsplash_id + '.jpeg';
     the_metadata.filename = filename;
     the_metadata.id = imageId;
     var file = fs.createWriteStream(folder_path + '/' + filename);
@@ -153,7 +153,7 @@ var exec_output = function (error, stdout, stderr) {
 var exitCount = 0;
 
 var downloadNextImage = function () { 
-  if (toDownload.length == 0) {
+  if (toDownload.length === 0) {
     console.log('Exiting, nothing to download!');
     process.exit(0);
     return;
