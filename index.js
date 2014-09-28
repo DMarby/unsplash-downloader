@@ -24,12 +24,6 @@ try {
 
 var highestId = photos.length;
 
-try {
-  var metadata = require('./metadata.json');
-} catch (e) {
-  var metadata = [];
-}
-
 var toDownload = [];
 
 var pages = 0;
@@ -43,7 +37,7 @@ if (noConfig) {
     .option('-f, --folder_path <path>', 'Folder path of where to download the photos', 'photos')
     .option('-g, --git_push', 'Automatically commit & push to git repo in photos folder path')
     .parse(process.argv);
- }
+}
 
 var concurrent_downloads = !config.concurrent_downloads ? commander.concurrent_downloads : config.concurrent_downloads;
 var folder_path = !config.folder_path ? commander.folder_path : config.folder_path;
@@ -53,6 +47,12 @@ if (!concurrent_downloads || !folder_path) {
 }
 
 fs.mkdir(folder_path, function(e) {});
+
+try {
+  var metadata = require(folder_path + '/metadata.json');
+} catch (e) {
+  var metadata = [];
+}
 
 var getPageCount = function (callback) {
   var highestPage = 0;
