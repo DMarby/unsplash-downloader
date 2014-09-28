@@ -8,9 +8,9 @@ Tool for downloading all photos from unsplash.com, written in NodeJS.
 $ git clone https://github.com/DMarby/unsplash-downloader.git
 $ cd unsplash-downloader
 $ npm install
-$ node index --api_key=TUMBLR_APPLICATION_CONSUMER_KEY
+$ node index
 or
-Copy config.js.example to config.js, insert API key, then run using:
+Copy config.js.example to config.js and modify it, then run using:
 $ node index
 ```
 
