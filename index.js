@@ -148,6 +148,10 @@ var getImageInfo = function (page, callback) {
 
 var exec_output = function (error, stdout, stderr) { 
   console.log(stdout); 
+  if (config.post_command) {
+    console.log('Executing post_command');
+    exec(config.post_command);
+  }
 }
 
 var exitCount = 0;
@@ -168,6 +172,7 @@ var downloadNextImage = function () {
         if (git_push) {
           console.log('Pushing to git!');
           exec('cd ' + folder_path + ' && git add -A . && git commit -am \'Add more images - ' + new Date().toLocaleDateString() + '\' && git push origin master', exec_output);
+          return;
         }
         if (config.post_command) {
           console.log('Executing post_command');
