@@ -171,6 +171,9 @@ var downloadNextImage = function () {
   if (currentPost > toDownload.length) {
       exitCount++;
       if (exitCount >= concurrent_downloads) {
+        metadata.sort(function (a,b) { 
+          return a.id - b.id; 
+        });
         fs.writeFile('photos.json', JSON.stringify(photos), 'utf8', function (err) {});
         fs.writeFile(folder_path + '/metadata.json', JSON.stringify(metadata), 'utf8', function (err) {});
         if (config.create_zip) {
