@@ -5,6 +5,8 @@ var https = require('https'), http = require('http');
 var request = require('request');
 var fs = require('fs');
 var exec = require('child_process').exec;
+var archiver = require('archiver');
+var pretty = require('prettysize');
 var noConfig = false;
 try {
   var config = require('./config');
@@ -150,7 +152,9 @@ var exec_output = function (error, stdout, stderr) {
   console.log(stdout); 
   if (config.post_command) {
     console.log('Executing post_command');
-    exec(config.post_command);
+    exec(config.post_command, function (error, stdout, stderr) {
+      console.log(stdout);
+    });
   }
 }
 
@@ -169,6 +173,29 @@ var downloadNextImage = function () {
       if (exitCount >= concurrent_downloads) {
         fs.writeFile('photos.json', JSON.stringify(photos), 'utf8', function (err) {});
         fs.writeFile(folder_path + '/metadata.json', JSON.stringify(metadata), 'utf8', function (err) {});
+        if (config.create_zip) {
+          console.log('Creating zip');
+          fs.unlink(config.create_zip, function (err) {});
+          var archive = archiver('zip');
+          var output = fs.createWriteStream(config.create_zip);
+
+          output.on('close', function () {
+            console.log('Done creating zip, total size: %s bytes', pretty(archive.pointer()));
+          });
+
+          archive.on('error', function (err) {
+            console.log('Error creating zip: ');
+            throw err;
+          });
+
+          archive.pipe(output);
+
+          archive.bulk([
+            { expand: true, cwd: folder_path, src: ['*.jpeg', 'metadata.json'] }
+          ]);
+
+          archive.finalize();
+        }
         if (git_push) {
           console.log('Pushing to git!');
           exec('cd ' + folder_path + ' && git add -A . && git commit -am \'Add more images - ' + new Date().toLocaleDateString() + '\' && git push origin master', exec_output);
@@ -176,7 +203,9 @@ var downloadNextImage = function () {
         }
         if (config.post_command) {
           console.log('Executing post_command');
-          exec(config.post_command);
+          exec(config.post_command, function (error, stdout, stderr) {
+            console.log(stdout);
+          });
         }
       }
       return;

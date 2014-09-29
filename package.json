@@ -12,8 +12,10 @@
   },
   "author": "David Marby <david@dmarby.se> http://dmarby.se",
   "dependencies": {
+    "archiver": "^0.11.0",
+    "cheerio": "^0.17.0",
     "commander": "^2.2.0",
-    "request": "^2.35.0",
-    "cheerio": "^0.17.0"
+    "prettysize": "0.0.3",
+    "request": "^2.35.0"
   }
 }
