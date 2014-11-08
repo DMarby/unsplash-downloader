@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 var async = require('async')
 var commander = require('commander')
 var cheerio = require('cheerio')
