@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 var async = require('async')
 var commander = require('commander')
 var cheerio = require('cheerio')
@@ -6,13 +7,15 @@ var https = require('https')
 var request = require('request')
 var fs = require('fs')
 var exec = require('child_process').exec
+var pretty = require('prettysize')
+var archiver = require('archiver')
 var pjson = require('./package.json')
 
 var noConfig = false
 
 try {
   var config = require('./config')
-  if (!config.concurrent_downloads || !config.folder_path || config.git_push === undefined) {
+  if (!config.concurrent_downloads || !config.folder_path || !config.git_push) {
     noConfig = true
   }
 } catch (erro) {
@@ -36,7 +39,7 @@ if (noConfig) {
 
 var concurrent_downloads = !config.concurrent_downloads ? commander.concurrent_downloads : config.concurrent_downloads
 var folder_path = !config.folder_path ? commander.folder_path : config.folder_path
-var git_push = config.git_push === undefined ? commander.git_push : config.git_push
+var git_push = !config.git_push ? commander.git_push : config.git_push
 
 if (!concurrent_downloads || !folder_path) {
   commander.help()
@@ -172,6 +175,30 @@ var downloadImages = function (imagesToDownload) {
     fs.writeFile('photos.json', JSON.stringify(photos), 'utf8', function (error) {})
     fs.writeFile(folder_path + '/metadata.json', JSON.stringify(metadata), 'utf8', function (error) {})
     
+    if (config.create_zip) {
+      console.log('Creating zip')
+      fs.unlink(config.create_zip, function (error) {})
+      var archive = archiver('zip')
+      var output = fs.createWriteStream(config.create_zip)
+
+      output.on('close', function () {
+        console.log('Done creating zip, total size: %s bytes', pretty(archive.pointer()))
+      })
+
+      archive.on('error', function (error) {
+        console.log('Error creating zip: ')
+        throw error
+      })
+
+      archive.pipe(output)
+
+      archive.bulk([
+        { expand: true, cwd: folder_path, src: ['*.jpeg', 'metadata.json'] }
+      ])
+
+      archive.finalize()
+    }
+
     if (git_push) {
       console.log('Pushing to git!')
       exec('cd ' + folder_path + ' && git add -A . && git commit -am \'Add more images - ' + new Date().toLocaleDateString() + '\' && git push origin master', exec_output)
