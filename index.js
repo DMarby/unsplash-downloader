@@ -172,6 +172,9 @@ var downloadImages = function (imagesToDownload) {
     })
   }, function (error) {
     console.log('Done!')
+    metadata.sort(function (a,b) { 
+      return a.id - b.id
+    })
     fs.writeFile('photos.json', JSON.stringify(photos), 'utf8', function (error) {})
     fs.writeFile(folder_path + '/metadata.json', JSON.stringify(metadata), 'utf8', function (error) {})
     
@@ -207,7 +210,9 @@ var downloadImages = function (imagesToDownload) {
     
     if (config.post_command) {
       console.log('Executing post_command')
-      exec(config.post_command)
+      exec(config.post_command, function (error, stdout, stderr) {
+        console.log(stdout)
+      })
     }
   })
 }
