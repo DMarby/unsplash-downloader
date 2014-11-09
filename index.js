@@ -171,9 +171,11 @@ var downloadImages = function (imagesToDownload) {
     })
   }, function (error) {
     console.log('Done!')
+
     metadata.sort(function (a,b) { 
       return a.id - b.id
     })
+
     fs.writeFile('photos.json', JSON.stringify(photos), 'utf8', function (error) {})
     fs.writeFile(folder_path + '/metadata.json', JSON.stringify(metadata), 'utf8', function (error) {})
     
@@ -185,6 +187,10 @@ var downloadImages = function (imagesToDownload) {
 
       output.on('close', function () {
         console.log('Done creating zip, total size: %s bytes', pretty(archive.pointer()))
+        doGitPush()
+        if (!git_push) {
+          runPostCommand()
+        }
       })
 
       archive.on('error', function (error) {
@@ -199,19 +205,11 @@ var downloadImages = function (imagesToDownload) {
       ])
 
       archive.finalize()
-    }
-
-    if (git_push) {
-      console.log('Pushing to git!')
-      exec('cd ' + folder_path + ' && git add -A . && git commit -am \'Add more images - ' + new Date().toLocaleDateString() + '\' && git push origin master', exec_output)
-      return
-    }
-    
-    if (config.post_command) {
-      console.log('Executing post_command')
-      exec(config.post_command, function (error, stdout, stderr) {
-        console.log(stdout)
-      })
+    } else {
+      doGitPush()
+      if (!git_push) {
+        runPostCommand()
+      }
     }
   })
 }
@@ -241,11 +239,22 @@ var downloadImage = function (the_metadata, callback) {
   })
 }
 
-var exec_output = function (error, stdout, stderr) { 
-  console.log(stdout)
+var doGitPush = function () {
+  if (git_push) {
+    console.log('Pushing to git!')
+    exec('cd ' + folder_path + ' && git add -A . && git commit -am \'Add more images - ' + new Date().toLocaleDateString() + '\' && git push origin master', function (error, stdout, stderr) {
+      console.log(stdout)
+      runPostCommand()
+    })
+  }
+}
+
+var runPostCommand = function () {    
   if (config.post_command) {
     console.log('Executing post_command')
-    exec(config.post_command)
+    exec(config.post_command, function (error, stdout, stderr) {
+      console.log(stdout)
+    })
   }
 }
 
