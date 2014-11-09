@@ -17,13 +17,13 @@ try {
   if (!config.concurrent_downloads || !config.folder_path || !config.git_push) {
     noConfig = true
   }
-} catch (erro) {
+} catch (error) {
   noConfig = true
 }
 
 try {
   var photos = require('./photos.json')
-} catch (e) {
+} catch (error) {
   var photos = []
 }
 
