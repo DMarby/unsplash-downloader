@@ -177,7 +177,7 @@ var downloadImages = function (imagesToDownload) {
     })
 
     fs.writeFile('photos.json', JSON.stringify(photos), 'utf8', function (error) {})
-    fs.writeFile(folder_path + '/metadata.json', JSON.stringify(metadata), 'utf8', function (error) {})
+    fs.writeFile(folder_path + '/metadata.json', JSON.stringify(metadata, null, 4), 'utf8', function (error) {})
     
     if (config.create_zip) {
       console.log('Creating zip')
