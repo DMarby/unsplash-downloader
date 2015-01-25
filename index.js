@@ -14,10 +14,12 @@ var noConfig = false
 
 try {
   var config = require('./config')
-  if (!config.concurrent_downloads || !config.folder_path || !config.git_push) {
+  
+  if (!config.concurrent_downloads || !config.folder_path || !config.git_push || !config.all) {
     noConfig = true
   }
 } catch (error) {
+  var config = {}
   noConfig = true
 }
 
@@ -33,12 +35,14 @@ if (noConfig) {
     .option('-c, --concurrent_downloads <amount>', 'Amount of concurrent downloads allowed', 5)
     .option('-f, --folder_path <path>', 'Folder path of where to download the photos', 'photos')
     .option('-g, --git_push', 'Automatically commit & push to git repo in photos folder path')
+    .option('-a, --all', 'Download all images on the front page rather than just the featured ones')
     .parse(process.argv)
 }
 
 var concurrent_downloads = !config.concurrent_downloads ? commander.concurrent_downloads : config.concurrent_downloads
 var folder_path = !config.folder_path ? commander.folder_path : config.folder_path
 var git_push = !config.git_push ? commander.git_push : config.git_push
+var all = !config.all ? commander.all : config.all
 
 if (!concurrent_downloads || !folder_path) {
   commander.help()
@@ -70,9 +74,11 @@ var getPageCountAndDownload = function () {
   })
 }
 
+var root_url = all ? 'https://unsplash.com/filter?scope[featured]=0' : 'https://unsplash.com/filter?scope[featured]=1'
+
 var getPageCount = function (callback) {
   var highestPage = 0
-  request('https://unsplash.com', function (error, response, body) {
+  request(root_url, function (error, response, body) {
     if (!error && response.statusCode == 200) {
       var $ = cheerio.load(body)
       $('.pagination a').each(function (index, element) {
@@ -90,7 +96,7 @@ var getPageCount = function (callback) {
 var getImageInfo = function (page, callback) {
   var imageInfo = []
   
-  request('https://unsplash.com/?page=' + page, function (error, response, body) {
+  request(root_url + '&page=' + page, function (error, response, body) {
     if (!error && response.statusCode == 200) {
       var $ = cheerio.load(body)
       

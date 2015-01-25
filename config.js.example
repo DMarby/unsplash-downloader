@@ -1,7 +1,8 @@
 module.exports = exports = {
-	concurrent_downloads: 5,
-	folder_path: './photos',
-	git_push: false,
-	post_command: false,
-	create_zip: false
+  concurrent_downloads: 5,
+  folder_path: './photos',
+  git_push: false,
+  post_command: false,
+  create_zip: false,
+  all: false
 }
