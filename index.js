@@ -323,7 +323,7 @@ var downloadImage = function (the_metadata, callback) {
 var doGitPush = function () {
   if (git_push) {
     console.log('Pushing to git!')
-    exec('cd ' + folder_path + ' && git add -A . && git commit -am \'Add more images - ' + new Date().toLocaleDateString() + '\' && git push origin master', function (error, stdout, stderr) {
+    exec('cd ' + folder_path + ' && git add -A . && git commit -am \'Update images - ' + new Date().toLocaleDateString() + '\' && git push origin master', function (error, stdout, stderr) {
       console.log(stdout)
       runPostCommand()
     })
