@@ -4,5 +4,6 @@ module.exports = exports = {
   git_push: false,
   post_command: false,
   create_zip: false,
-  all: false
+  all: false,
+  check_for_deleted: false
 }
