@@ -1,8 +1,6 @@
 var async = require('async')
 var commander = require('commander')
 var cheerio = require('cheerio')
-var http = require('http')
-var https = require('https')
 var request = require('request')
 var fs = require('fs')
 var exec = require('child_process').exec
@@ -13,6 +11,8 @@ var path = require('path')
 
 var noConfig = false
 
+var changedMetadata = false
+
 try {
   var config = require('./config')
   
@@ -22,6 +22,10 @@ try {
 } catch (error) {
   var config = {}
   noConfig = true
+}
+
+var headers = {
+  'User-Agent': 'Unsplash-Downloader'
 }
 
 if (noConfig) {
@@ -93,7 +97,11 @@ var imageAlreadyExists = function (imageMetadata) {
     return image.image_url === imageMetadata.image_url
   })
 
-  return images.length > 0
+  if (images.length) {
+    return images[0]
+  }
+
+  return false
 }
 
 var getImageInfo = function (page, callback) {
@@ -128,15 +136,24 @@ var getImageInfo = function (page, callback) {
           var the_author = $(this).find('.epsilon p').text().split('/')[1]
           imageMetadata.author = the_author ? removeSpaces(the_author.replace('By', '')) : 'Unknown'
         }
-
-        var exists = imageAlreadyExists(imageMetadata)
-
-        if (!imageMetadata.image_url || imageAlreadyExists(imageMetadata)) {
-          if (!imageMetadata.image_url) {
-            console.log('Could not find image url for ' + post_url)
-          }
+        if (!imageMetadata.image_url) {
+          console.log('Could not find image url for ' + post_url)
         } else {
-          imageInfo.push(imageMetadata)
+          var exists = imageAlreadyExists(imageMetadata)
+
+          if (exists) {
+            var currentMetadata = metadata[metadata.indexOf(exists)]
+
+            if (currentMetadata.post_url !== imageMetadata.post_url || currentMetadata.author !== imageMetadata.author || currentMetadata.author_url !== imageMetadata.author_url) {
+              changedMetadata = true
+
+              metadata[metadata.indexOf(exists)].post_url = imageMetadata.post_url
+              metadata[metadata.indexOf(exists)].author = imageMetadata.author
+              metadata[metadata.indexOf(exists)].author_url = imageMetadata.author_url
+            }
+          } else {
+            imageInfo.push(imageMetadata)
+          }
         }
       })
 
@@ -157,9 +174,13 @@ var prepareToDownloadImages = function (imagesToDownload) {
 
     if (!imagesToDownload.length) {
       console.log('Nothing to download!')
-
+ 
       if (check_for_deleted) {
         checkForDeletedImages()
+      } else {
+        if (changedMetadata) {
+          postDownloadTasks()
+        }
       }
 
       return
@@ -179,12 +200,9 @@ var downloadImages = function (imagesToDownload) {
   var currentPost = 0
   async.eachLimit(imagesToDownload, concurrent_downloads, function (imageToDownload, next) {
     console.log('Downloading image ' + (currentPost++ + 1) + ' of ' + imagesToDownload.length + ' (' + imageToDownload.post_url + ')')
+
     downloadImage(imageToDownload, function (the_metadata) {
-      if (the_metadata.deleted) {
-        metadata.push(the_metadata)
-      } else {
-        metadata.push(the_metadata)
-      }
+      metadata.push(the_metadata)
       next()
     })
   }, function (error) {
@@ -212,7 +230,7 @@ var checkForDeletedImages = function (callback) {
       return next()
     }
 
-    request.head(image.image_url, function (err, res, body) {
+    request.head({ url: image.image_url, headers: headers }, function (err, res, body) {
       if (res && res.statusCode === 404) {
         console.log('%s has been deleted!', image.image_url)
         deletedImages.push(image)
@@ -235,7 +253,9 @@ var checkForDeletedImages = function (callback) {
       metadata[metadata.indexOf(image)] = { id: image.id, deleted: true }
     })
 
-    postDownloadTasks()
+    if (deletedImages.length || changedMetadata) {
+      postDownloadTasks()
+    }
   })
 }
 
@@ -287,26 +307,17 @@ var postDownloadTasks = function () {
 }
 
 var downloadImage = function (the_metadata, callback) {
-  request.head(the_metadata.image_url, function (err, res, body) {
-    var filename = String('0000' + the_metadata.id).slice(-4) + '_' + the_metadata.unsplash_id + '.jpeg'
-    the_metadata.filename = filename
-    var file = fs.createWriteStream(path.resolve(folder_path, filename))
-    
-    var handleDownload = function (response) {
-      response.pipe(file)
-      file.on('finish', function () {
-        file.close(function () {
-          callback(the_metadata)
-        })
-      })
-    }
-
-    if (res.request.uri.protocol == 'https:') {
-      https.get(res.request.uri.href, handleDownload)
-    } else {
-      http.get(res.request.uri.href, handleDownload)
-    }
+  var filename = String('0000' + the_metadata.id).slice(-4) + '_' + the_metadata.unsplash_id + '.jpeg'
+  the_metadata.filename = filename
+  var file = fs.createWriteStream(path.resolve(folder_path, filename))
+ 
+  file.on('finish', function () {
+    file.close(function () {
+      callback(the_metadata)
+    })
   })
+
+  request.get({ url: the_metadata.image_url, headers: headers }).pipe(file)
 }
 
 var doGitPush = function () {
