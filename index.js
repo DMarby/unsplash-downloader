@@ -213,14 +213,14 @@ var downloadImages = function (imagesToDownload) {
     })
 
     if (check_for_deleted) {
-      checkForDeletedImages()
+      checkForDeletedImages(true)
     } else {
       postDownloadTasks()
     }
   })
 }
 
-var checkForDeletedImages = function (callback) {
+var checkForDeletedImages = function (didDownloadImages) {
   console.log('Checking for deleted images!')
 
   var deletedImages = []
@@ -253,7 +253,7 @@ var checkForDeletedImages = function (callback) {
       metadata[metadata.indexOf(image)] = { id: image.id, deleted: true }
     })
 
-    if (deletedImages.length || changedMetadata) {
+    if (deletedImages.length || changedMetadata || didDownloadImages) {
       postDownloadTasks()
     }
   })
