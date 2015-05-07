@@ -202,7 +202,12 @@ var downloadImages = function (imagesToDownload) {
     console.log('Downloading image ' + (currentPost++ + 1) + ' of ' + imagesToDownload.length + ' (' + imageToDownload.post_url + ')')
 
     downloadImage(imageToDownload, function (the_metadata) {
-      metadata.push(the_metadata)
+      if (!the_metadata) {
+        console.log('Problem downloading ' + imageToDownload.post_url)
+      } else {
+        metadata.push(the_metadata)
+      }
+
       next()
     })
   }, function (error) {
@@ -311,13 +316,27 @@ var downloadImage = function (the_metadata, callback) {
   the_metadata.filename = filename
   var file = fs.createWriteStream(path.resolve(folder_path, filename))
  
+  var deleted = false
+
   file.on('finish', function () {
     file.close(function () {
-      callback(the_metadata)
+      if (deleted) {
+        fs.unlink(path.resolve(folder_path, filename), function (error) {
+          callback()
+        })
+      } else {
+        callback(the_metadata)
+      }
     })
   })
 
-  request.get({ url: the_metadata.image_url, headers: headers }).pipe(file)
+  request.get({ url: the_metadata.image_url, headers: headers })
+    .on('response', function (response) {
+      if (response.statusCode === 404) {
+        deleted = true
+      }
+    })
+    .pipe(file)
 }
 
 var doGitPush = function () {
