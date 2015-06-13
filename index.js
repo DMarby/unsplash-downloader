@@ -115,9 +115,10 @@ var getImageInfo = function (page, callback) {
         var url = $(this).find('.photo a').attr('href')
         var post_url = 'https://unsplash.com' + url.replace('/download', '')
         var imageMetadata = {
-          'post_url': post_url,
-          'image_url': 'https://unsplash.com' + url,
-          'unsplash_id': url.replace('/photos/', '').replace('/download', '')
+          post_url: post_url,
+          image_url: 'https://unsplash.com' + url,
+          unsplash_id: url.replace('/photos/', '').replace('/download', ''),
+          page: page
         }
 
         $(this).find('.epsilon a').each(function (index, element) {
@@ -199,12 +200,13 @@ var prepareToDownloadImages = function (imagesToDownload) {
 var downloadImages = function (imagesToDownload) {
   var currentPost = 0
   async.eachLimit(imagesToDownload, concurrent_downloads, function (imageToDownload, next) {
-    console.log('Downloading image ' + (currentPost++ + 1) + ' of ' + imagesToDownload.length + ' (' + imageToDownload.post_url + ')')
+    console.log('Downloading image ' + (currentPost++ + 1) + ' of ' + imagesToDownload.length + ' (' + imageToDownload.post_url + ') on page ' + imageToDownload.page)
 
     downloadImage(imageToDownload, function (the_metadata) {
       if (!the_metadata) {
         console.log('Problem downloading ' + imageToDownload.post_url)
       } else {
+        delete the_metadata.page
         metadata.push(the_metadata)
       }
 
