@@ -85,6 +85,7 @@ var root_url = all ? 'https://unsplash.com/new' : 'https://unsplash.com'
 
 var getPageCount = function (callback) {
   var highestPage = 0
+
   request(root_url, function (error, response, body) {
     if (!error && response.statusCode == 200) {
       var $ = cheerio.load(body)
@@ -95,6 +96,7 @@ var getPageCount = function (callback) {
           highestPage = parseInt(linkText)
         }
       })
+
       callback(highestPage)
     }
   })
@@ -196,12 +198,15 @@ var prepareToDownloadImages = function (imagesToDownload) {
 
     imagesToDownload.reverse()
 
-    async.mapSeries(imagesToDownload, function (image, next) {
+    var imagesToDownloadWithId = []
+
+    for (var i in imagesToDownload) {
+      var image = imagesToDownload[i]
       image.id = highestId++
-      next(null, image)
-    }, function (error, imagesToDownloadWithId) {
-      downloadImages(imagesToDownloadWithId)
-    })
+      imagesToDownloadWithId.push(image)
+    }
+
+    downloadImages(imagesToDownloadWithId)
 }
 
 var downloadImages = function (imagesToDownload) {
