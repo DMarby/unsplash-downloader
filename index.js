@@ -49,8 +49,16 @@ if (!concurrent_downloads || !folder_path) {
   commander.help()
 }
 
+var highestId = 0
+
 try {
   var metadata = require(folder_path + '/metadata.json')
+
+  metadata.forEach(function (image) {
+    if (image.id >= highestId) {
+      highestId = image.id + 1
+    }
+  })
 } catch (error) {
   var metadata = []
 }
@@ -180,8 +188,6 @@ var removeSpaces = function (str) {
 }
 
 var prepareToDownloadImages = function (imagesToDownload) {
-    var highestId = metadata.length
-
     if (!imagesToDownload.length) {
       console.log('Nothing to download!')
  
