@@ -293,7 +293,7 @@ var postDownloadTasks = function () {
         var output = fs.createWriteStream(config.create_zip)
 
         output.on('close', function () {
-          console.log('Done creating zip, total size: %s bytes', pretty(archive.pointer()))
+          console.log('Done creating zip, total size: %s', pretty(archive.pointer()))
           
           doGitPush()
           
