@@ -59,9 +59,17 @@ var getPageCountAndDownload = function () {
   getPageCount(function (pageCount) {
     async.times(pageCount, function (page, next) {
       getImageInfo(page += 1, function (error, imageInfo) {
-        next(error, imageInfo)
+        if (error) {
+          return next(error)
+        }
+
+        next(null, imageInfo)
       })
     }, function (error, imageInfo) {
+      if (error) {
+        return console.error('Error getting page count', error)
+      }
+
       var imagesToDownload = []
       
       imageInfo.forEach(function (imageInfoList) {
@@ -73,7 +81,7 @@ var getPageCountAndDownload = function () {
   })
 }
 
-var root_url = all ? 'https://unsplash.com/filter?scope[featured]=0' : 'https://unsplash.com/filter?scope[featured]=1'
+var root_url = all ? 'https://unsplash.com/new' : 'https://unsplash.com'
 
 var getPageCount = function (callback) {
   var highestPage = 0
@@ -107,7 +115,7 @@ var imageAlreadyExists = function (imageMetadata) {
 var getImageInfo = function (page, callback) {
   var imageInfo = []
   
-  request(root_url + '&page=' + page, function (error, response, body) {
+  request(root_url + '?page=' + page, function (error, response, body) {
     if (!error && response.statusCode == 200) {
       var $ = cheerio.load(body)
       
@@ -160,8 +168,7 @@ var getImageInfo = function (page, callback) {
 
       callback(null, imageInfo)
     } else {
-      console.log('Failed getting image info %s', page)
-      callback(true)
+      callback(error ? error : response.statusCode)
     }
   })
 }
