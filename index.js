@@ -56,7 +56,7 @@ try {
 
   metadata.forEach(function (image) {
     if (image.id >= highestId) {
-      highestId = image.id + 1
+      highestId = image.id
     }
   })
 } catch (error) {
@@ -139,22 +139,15 @@ var getImageInfo = function (page, callback) {
           page: page
         }
 
-        $(this).find('.epsilon a').each(function (index, element) {
-          var linkText = $(this).text()
-          var linkURL = $(this).attr('href')
-          
-          if (linkText === 'Download') {
-            imageMetadata.image_url = imageMetadata.image_url ? imageMetadata.image_url : linkURL
-          } else {
-            imageMetadata.author_url = 'https://unsplash.com' + linkURL
-            imageMetadata.author = linkText
-          }
-        })
-
         if (!imageMetadata.author) {
-          var the_author = $(this).find('.epsilon p').text().split('/')[1]
-          imageMetadata.author = the_author ? removeSpaces(the_author.replace('By', '')) : 'Unknown'
+          var the_author = $(this).find('.photo-description__author h2 a')
+          imageMetadata.author = the_author && the_author.text() ? removeSpaces(the_author.text()) : 'Unknown'
+
+          if (the_author) {
+            imageMetadata.author_url = 'https://unsplash.com' + the_author.attr('href')
+          }
         }
+
         if (!imageMetadata.image_url) {
           console.log('Could not find image url for ' + post_url)
         } else {
@@ -208,7 +201,7 @@ var prepareToDownloadImages = function (imagesToDownload) {
 
     for (var i in imagesToDownload) {
       var image = imagesToDownload[i]
-      image.id = highestId++
+      image.id = ++highestId
       imagesToDownloadWithId.push(image)
     }
 
@@ -218,7 +211,7 @@ var prepareToDownloadImages = function (imagesToDownload) {
 var downloadImages = function (imagesToDownload) {
   var currentPost = 0
   async.eachLimit(imagesToDownload, concurrent_downloads, function (imageToDownload, next) {
-    console.log('Downloading image ' + (currentPost++ + 1) + ' of ' + imagesToDownload.length + ' (' + imageToDownload.post_url + ') on page ' + imageToDownload.page)
+    console.log('Downloading image ' + (++currentPost) + ' of ' + imagesToDownload.length + ' (' + imageToDownload.post_url + ') on page ' + imageToDownload.page)
 
     downloadImage(imageToDownload, function (the_metadata) {
       if (!the_metadata) {
