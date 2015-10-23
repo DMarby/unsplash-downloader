@@ -131,21 +131,20 @@ var getImageInfo = function (page, callback) {
       
       $('.photo-container').each(function (index, element) {
         var url = $(this).find('.photo a').attr('href')
-        var post_url = 'https://unsplash.com' + url.replace('/download', '')
+        var image_url = $(this).find('.photo-description__download a').attr('href')
+
         var imageMetadata = {
-          post_url: post_url,
-          image_url: 'https://unsplash.com' + url,
-          unsplash_id: url.replace('/photos/', '').replace('/download', ''),
+          post_url: 'https://unsplash.com' + url,
+          image_url: 'https://unsplash.com' + image_url,
+          unsplash_id: url.replace('/photos/', ''),
           page: page
         }
 
-        if (!imageMetadata.author) {
-          var the_author = $(this).find('.photo-description__author h2 a')
-          imageMetadata.author = the_author && the_author.text() ? removeSpaces(the_author.text()) : 'Unknown'
+        var the_author = $(this).find('.photo-description__author h2 a')
+        imageMetadata.author = the_author && the_author.text() ? removeSpaces(the_author.text()) : 'Unknown'
 
-          if (the_author) {
-            imageMetadata.author_url = 'https://unsplash.com' + the_author.attr('href')
-          }
+        if (imageMetadata.author) {
+          imageMetadata.author_url = 'https://unsplash.com' + the_author.attr('href')
         }
 
         if (!imageMetadata.image_url) {
@@ -250,7 +249,7 @@ var checkForDeletedImages = function (didDownloadImages) {
 
     request.head({ url: image.image_url, headers: headers }, function (err, res, body) {
       if (res && res.statusCode === 404) {
-        console.log('%s has been deleted!', image.image_url)
+        console.log('%s has been deleted!', image.post_url)
         deletedImages.push(image)
 
         var filename = path.resolve(folder_path, image.filename)
