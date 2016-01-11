@@ -140,7 +140,7 @@ var getImageInfo = function (page, callback) {
           page: page
         }
 
-        var the_author = $(this).find('.photo-description__author h2 a')
+        var the_author = $(this).find('.photo-description__author h2 a').first()
         imageMetadata.author = the_author && the_author.text() ? removeSpaces(the_author.text()) : 'Unknown'
 
         if (imageMetadata.author) {
