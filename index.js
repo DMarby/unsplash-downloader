@@ -139,22 +139,27 @@ var getImageInfo = function (page, callback) {
           page: page
         }
 
-        $(this).find('.epsilon a').each(function (index, element) {
+        $(this).find('.photo-description__download a').each(function(index, element){
+
+          var linkURL = $(this).attr('href')
+          if (linkURL) {
+            imageMetadata.image_url = 'https://unsplash.com' + linkURL
+          }
+        });
+
+        $(this).find('.photo-description__author h2 a').each(function(index, element){
           var linkText = $(this).text()
           var linkURL = $(this).attr('href')
-          
-          if (linkText === 'Download') {
-            imageMetadata.image_url = imageMetadata.image_url ? imageMetadata.image_url : linkURL
-          } else {
-            imageMetadata.author_url = 'https://unsplash.com' + linkURL
-            imageMetadata.author = linkText
-          }
-        })
+
+          imageMetadata.author_url = 'https://unsplash.com' + linkURL
+          imageMetadata.author = linkText
+        });
 
         if (!imageMetadata.author) {
           var the_author = $(this).find('.epsilon p').text().split('/')[1]
           imageMetadata.author = the_author ? removeSpaces(the_author.replace('By', '')) : 'Unknown'
         }
+
         if (!imageMetadata.image_url) {
           console.log('Could not find image url for ' + post_url)
         } else {
