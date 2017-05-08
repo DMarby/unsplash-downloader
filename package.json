@@ -1,10 +1,13 @@
 {
   "name": "unsplash-downloader",
-  "version": "0.0.1",
+  "version": "1.0.0",
+  "license": "Unlicense",
   "main": "index.js",
+  "bin": {
+    "unsplash-downloader": "./bin/cli.js"
+  },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node index.js"
+    "test": "standard"
   },
   "repository": {
     "type": "git",
@@ -12,11 +15,13 @@
   },
   "author": "David Marby <david@dmarby.se> http://dmarby.se",
   "dependencies": {
-    "archiver": "^0.15.1",
-    "async": "^1.4.2",
-    "cheerio": "^0.19.0",
-    "commander": "^2.8.1",
-    "prettysize": "0.0.3",
-    "request": "^2.62.0"
+    "async": "^2.1.4",
+    "breeze": "^1.2.2",
+    "commander": "^2.9.0",
+    "nightmare": "^2.8.1",
+    "request": "^2.79.0"
+  },
+  "devDependencies": {
+    "standard": "^8.6.0"
   }
 }
