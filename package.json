@@ -15,13 +15,16 @@
   },
   "author": "David Marby <david@dmarby.se> http://dmarby.se",
   "dependencies": {
-    "async": "^2.1.4",
+    "async": "^2.4.0",
+    "bottleneck": "^1.15.1",
     "breeze": "^1.2.2",
+    "colors": "^1.1.2",
     "commander": "^2.9.0",
-    "nightmare": "^2.8.1",
-    "request": "^2.79.0"
+    "mkdirp": "^0.5.1",
+    "nightmare": "^2.10.0",
+    "request": "^2.81.0"
   },
   "devDependencies": {
-    "standard": "^8.6.0"
+    "standard": "^10.0.2"
   }
 }

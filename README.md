@@ -6,14 +6,27 @@ Tool for downloading all curated photos from unsplash.com, written in NodeJS.
 
 ### CLI
 ```shell
-$ npm install unsplash-downloader
-$ unsplash-downloader -help
+$ npm install -g unsplash-downloader
+$ unsplash-downloader --help
 ```
 
-### Programatically
+### Programmatically
 ```node
-const unsplashDownloader = require('unsplash-downloader')
+const UnsplashDownloader = require('unsplash-downloader')
 
+UnsplashDownloader.on('error', (error) => {
+  console.error(error)
+})
+
+UnsplashDownloader.on('progress', (progress) => {
+  console.log(progress)
+})
+
+UnsplashDownloader.on('done', () => {
+  console.log('Done')
+})
+
+UnsplashDownloader.download()
 ```
 
 ## License
