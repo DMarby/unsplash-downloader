@@ -200,7 +200,7 @@ module.exports = class UnsplashDownloader extends EventEmitter {
 
         var exists = self.metadata.filter((imageMetadata) => {
           return imageMetadata.id === imageId
-        }).length ? true : false
+        }).length
 
         if (!exists) {
           var metadata = {
@@ -218,7 +218,7 @@ module.exports = class UnsplashDownloader extends EventEmitter {
           newImages.push({
             metadata: metadata,
             downloadUrl: downloadUrl,
-            downloadPath: path.resolve(self.downloadPath, metadata.filename),
+            downloadPath: path.resolve(self.downloadPath, metadata.filename)
           })
         }
       }
@@ -230,9 +230,7 @@ module.exports = class UnsplashDownloader extends EventEmitter {
           return image.asyncPropsSelectedPhoto.id === imageMetadata.id
         })
 
-        var exists = matchingImages.length ? true : false
-
-        if (!exists && self.checkForDeleted) {
+        if (!matchingImages.length && self.checkForDeleted) {
           self.emit('progress', { message: util.format('Deleting removed image: %s', imageMetadata.filename) })
 
           fs.unlink(path.resolve(self.downloadPath, imageMetadata.filename), (error) => {
