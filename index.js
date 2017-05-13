@@ -20,15 +20,16 @@ module.exports = class UnsplashDownloader extends EventEmitter {
     this.metadataPath = path.resolve(downloadPath, 'metadata.json')
 
     this.nightmare = Nightmare({
-      show: false
+      show: process.env.NODE_ENV === 'development',
+      pollInterval: 50
     })
 
     this.nightmare.useragent(userAgent) // Set the nightmare user agent
 
     this.flow = Breeze()
 
-    // Limit requests to Unsplash to a maximum concurrency of 1, wait 500ms per request
-    this.limiter = new Bottleneck(1, 500)
+    // Limit requests to Unsplash to a maximum concurrency of 1
+    this.limiter = new Bottleneck(1)
   }
 
   _setup (callback) {
@@ -139,7 +140,7 @@ module.exports = class UnsplashDownloader extends EventEmitter {
         self.limiter.submit((callback) => {
           self.nightmare
             .goto(collection)
-            .wait(1000) // Wait to ensure that the page loads
+            .wait('.y5w1y .cV68d')
             .evaluate(() => {
               var images = []
 
@@ -179,6 +180,9 @@ module.exports = class UnsplashDownloader extends EventEmitter {
         self.limiter.submit((callback) => {
           self.nightmare
             .goto(image)
+            .wait(() => {
+              return __ASYNC_PROPS__ && __ASYNC_PROPS__.length // eslint-disable-line no-undef
+            })
             .evaluate(() => __ASYNC_PROPS__[0]) // eslint-disable-line no-undef
             .then(result => callback(null, result))
             .catch((error) => callback(error))
@@ -230,18 +234,23 @@ module.exports = class UnsplashDownloader extends EventEmitter {
           return image.asyncPropsSelectedPhoto.id === imageMetadata.id
         })
 
-        if (!matchingImages.length && self.checkForDeleted) {
-          self.emit('progress', { message: util.format('Deleting removed image: %s', imageMetadata.filename) })
+        if (!matchingImages.length) {
+          if (self.checkForDeleted) {
+            self.emit('progress', { message: util.format('Deleting removed image: %s', imageMetadata.filename) })
 
-          fs.unlink(path.resolve(self.downloadPath, imageMetadata.filename), (error) => {
-            if (error) {
-              return next(error)
-            }
+            fs.unlink(path.resolve(self.downloadPath, imageMetadata.filename), (error) => {
+              if (error) {
+                return next(error)
+              }
 
-            next()
-          })
+              next()
+            })
 
-          return
+            return
+          }
+
+          newMetadata.push(imageMetadata)
+          return next()
         }
 
         var matchingImage = matchingImages[0]
