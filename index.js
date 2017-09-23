@@ -140,11 +140,11 @@ module.exports = class UnsplashDownloader extends EventEmitter {
         self.limiter.submit((callback) => {
           self.nightmare
             .goto(collection)
-            .wait('.y5w1y .cV68d')
+            .wait('.bQJ8Z ._23lr1')
             .evaluate(() => {
               var images = []
 
-              document.querySelectorAll('.y5w1y .cV68d').forEach((image) => {
+              document.querySelectorAll('.bQJ8Z ._23lr1').forEach((image) => {
                 images.push(image.href)
               })
 
@@ -180,11 +180,36 @@ module.exports = class UnsplashDownloader extends EventEmitter {
         self.limiter.submit((callback) => {
           self.nightmare
             .goto(image)
-            .wait(() => {
-              return __ASYNC_PROPS__ && __ASYNC_PROPS__.length // eslint-disable-line no-undef
+            .wait(1000)
+            .evaluate(() => {
+              function getDimensionElement () {
+                var elements = document.querySelectorAll('._2buGq._3Y6hz.LmUCs._1WCyJ')
+
+                for (var i = 0; i < elements.length; ++i) {
+                  if (elements[i].textContent === 'Dimensions') {
+                    return elements[i].nextSibling
+                  }
+                }
+              }
+
+              var dimensions = getDimensionElement().textContent.split('×')
+
+              return {
+                id: window.location.href.split('/').pop(),
+                url: window.location.href,
+                width: dimensions[0].trim(),
+                height: dimensions[1].trim(),
+                downloadUrl: document.querySelector('._1QwHQ._1l4Hh._21rCr._1zIyn._27ROS._1Tfeo._2bCz0').href,
+                author: {
+                  name: document.querySelector('._3XzpS._3myVE._1_w0v._2tPAp._21rCr').textContent,
+                  url: document.querySelector('._3XzpS._3myVE._1_w0v._2tPAp._21rCr').href
+                }
+              }
             })
-            .evaluate(() => __ASYNC_PROPS__[0]) // eslint-disable-line no-undef
-            .then(result => callback(null, result))
+            .then(result => {
+              result.url = image
+              callback(null, result)
+            })
             .catch((error) => callback(error))
         }, callback)
       }, (error, result) => {
@@ -196,32 +221,25 @@ module.exports = class UnsplashDownloader extends EventEmitter {
     this.flow.then((next, images) => {
       var newImages = []
 
-      for (var imageData of images) {
-        var imageId = imageData.asyncPropsSelectedPhoto.id
-        var image = imageData.asyncPropsPhotos[imageId]
-        var downloadUrl = image.urls.raw
-        var author = imageData.asyncPropsUsers[image.userId]
-
+      for (var image of images) {
         var exists = self.metadata.filter((imageMetadata) => {
-          return imageMetadata.id === imageId
+          return imageMetadata.id === image.id
         }).length
 
         if (!exists) {
           var metadata = {
-            id: imageId,
-            filename: util.format('%s.jpeg', imageId),
+            id: image.id,
+            filename: util.format('%s.jpeg', image.id),
             width: image.width,
             height: image.height,
-            url: image.links.html,
-            tags: image.tags,
-            author: author.name,
-            author_url: author.links.html,
-            categories: image.categories
+            url: image.url,
+            author: image.author.name,
+            author_url: image.author.url
           }
 
           newImages.push({
             metadata: metadata,
-            downloadUrl: downloadUrl,
+            downloadUrl: image.downloadUrl,
             downloadPath: path.resolve(self.downloadPath, metadata.filename)
           })
         }
@@ -231,7 +249,7 @@ module.exports = class UnsplashDownloader extends EventEmitter {
 
       async.eachSeries(self.metadata, (imageMetadata, next) => {
         var matchingImages = images.filter((image) => {
-          return image.asyncPropsSelectedPhoto.id === imageMetadata.id
+          return image.id === imageMetadata.id
         })
 
         if (!matchingImages.length) {
@@ -254,14 +272,10 @@ module.exports = class UnsplashDownloader extends EventEmitter {
         }
 
         var matchingImage = matchingImages[0]
-        var matchingImageMetadata = matchingImage.asyncPropsPhotos[matchingImage.asyncPropsSelectedPhoto.id]
-        var matchingAuthor = matchingImage.asyncPropsUsers[matchingImageMetadata.userId]
 
-        imageMetadata.url = matchingImageMetadata.url
-        imageMetadata.tags = matchingImageMetadata.tags
-        imageMetadata.author = matchingAuthor.name
-        imageMetadata.author_url = matchingAuthor.links.html
-        imageMetadata.categories = matchingImageMetadata.categories
+        imageMetadata.url = matchingImage.url
+        imageMetadata.author = matchingImage.author.name
+        imageMetadata.author_url = matchingImage.author.url
 
         newMetadata.push(imageMetadata)
         next()
